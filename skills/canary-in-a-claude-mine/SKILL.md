@@ -1,9 +1,9 @@
 ---
-name: canary
+name: canary-in-a-claude-mine
 description: A one-word tripwire that tells you a Claude Code session is degrading before it starts making things up. Use when a session runs long, when replies start feeling off, when the user asks "is this session still good" or "why does every reply start with Canary", or to read back at which turn a session slipped.
 ---
 
-# Canary
+# Canary in a Claude mine
 
 A long session fills the context window. The model does not fail loudly when that happens. It fails quietly, and the first thing it drops is the instruction that matters least. So this plugin gives it one that matters least on purpose, and watches it.
 

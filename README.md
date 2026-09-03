@@ -8,7 +8,7 @@ Long sessions degrade quietly. The model drops its least important instruction f
 
 ```
 /plugin marketplace add aguevara92/Canary-in-a-Claude-mine
-/plugin install canary@claude-mine
+/plugin install canary-in-a-claude-mine@canary-in-a-claude-mine
 ```
 
 Try it without installing:
@@ -35,7 +35,7 @@ Change the word with `echo Sparrow > ~/.claude/canary`, or `CANARY_WORD` in your
 - It only sees the main thread. Subagents are skipped.
 - It is one word of noise per reply. That is the price.
 
-The full explainer and the log format live in [skills/canary/SKILL.md](skills/canary/SKILL.md).
+The full explainer and the log format live in [skills/canary-in-a-claude-mine/SKILL.md](skills/canary-in-a-claude-mine/SKILL.md).
 
 ## Credit
 

@@ -1,12 +1,12 @@
 {
-  "name": "claude-mine",
+  "name": "canary-in-a-claude-mine",
   "owner": {
     "name": "Andres Guevara",
     "url": "https://andresguevara.ai"
   },
   "plugins": [
     {
-      "name": "canary",
+      "name": "canary-in-a-claude-mine",
       "source": "./",
       "description": "A one-word tripwire that notices when a Claude Code session starts dropping instructions, before it starts making things up.",
       "version": "0.1.0"
