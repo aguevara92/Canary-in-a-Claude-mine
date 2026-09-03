@@ -1,0 +1,20 @@
+{
+  "name": "canary",
+  "description": "A one-word tripwire that notices when a Claude Code session starts dropping instructions, before it starts making things up.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Andres Guevara",
+    "url": "https://andresguevara.ai"
+  },
+  "homepage": "https://andresguevara.ai/skills/canary/",
+  "license": "MIT",
+  "keywords": [
+    "context",
+    "degradation",
+    "hooks",
+    "long-sessions",
+    "canary"
+  ],
+  "repository": "https://github.com/aguevara92/Canary-in-a-Claude-mine",
+  "displayName": "Canary in a Claude mine"
+}
