@@ -20,8 +20,8 @@ claude --plugin-dir Canary-in-a-Claude-mine
 
 ## What happens then
 
-1. Every session starts with one injected instruction: the very first characters of the final message of every turn are `🐤` and a period, before any greeting or heading (a canary, what else). It can be any word or a single emoji. Nothing to add to your `CLAUDE.md`.
-2. At the end of every turn a Stop hook reads the transcript and checks the first word of the final message.
+1. Every session starts with one injected instruction: the very first characters of every message of every turn are `🐤` and a period, the short lines before a tool call included, before any greeting or heading (a canary, what else). It can be any word or a single emoji. Nothing to add to your `CLAUDE.md`.
+2. At the end of every turn a Stop hook reads the transcript and checks the first word of the first and the last message of the turn.
 3. The turn the word is missing, the hook blocks once and Claude has to tell you: the canary dropped, the last replies deserve a second look, compact or clear.
 4. Every turn is logged to `~/.claude/canary-logs/<session>.log` with its turn number. After a few sessions that file tells you at which turn your sessions actually start to slip.
 

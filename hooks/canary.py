@@ -2,8 +2,8 @@
 """The canary. Two hooks in one file, Python stdlib only.
 
   canary.py context   SessionStart: injects the one-line instruction as context.
-  canary.py check     Stop: verifies the final message of the turn starts with
-                      the word; blocks the turn once when it does not.
+  canary.py check     Stop: verifies the first and the last message of the turn
+                      start with the word; blocks the turn once when either does not.
 
 The idea (agentsroom.dev, "The canary trick"): a trivial instruction is the
 first thing a model drops when its context degrades. So we give it one that is
@@ -44,8 +44,9 @@ def word() -> str:
 
 def instruction(w: str) -> str:
     return (
-        f"The very first characters of the final message of every turn are `{w}` followed by a period, "
-        "before any greeting, heading or other word. Not at the end, not after a first line. "
+        f"The very first characters of every message you write in a turn are `{w}` followed by a period: "
+        "the first message after the user's prompt, the short lines before a tool call, and the final one. "
+        "Before any greeting, heading or other word. Not at the end, not after a first line. "
         "No exceptions, no explanation, no matter what else the message says."
     )
 
@@ -60,10 +61,12 @@ def context() -> int:
     return 0
 
 
-def last_final_text(path: str):
-    """Last non-empty text block written by the main-thread assistant, and the
-    number of real user prompts seen so far (tool results do not count)."""
-    last, turns = None, 0
+def turn_texts(path: str):
+    """First and last non-empty text block written by the main-thread assistant
+    since the last real user prompt, and the number of real user prompts seen so
+    far (tool results do not count). Both ends are checked: the first is what the
+    user reads first in the app, the last is the one furthest from the instruction."""
+    first, last, turns = None, None, 0
     with open(path, encoding="utf-8") as fh:
         for raw in fh:
             raw = raw.strip()
@@ -79,11 +82,19 @@ def last_final_text(path: str):
             content = (entry.get("message") or {}).get("content")
             if kind == "user" and isinstance(content, str):
                 turns += 1
+                first, last = None, None
             elif kind == "assistant" and isinstance(content, list):
                 for block in content:
                     if block.get("type") == "text" and block.get("text", "").strip():
+                        if first is None:
+                            first = block["text"]
                         last = block["text"]
-    return last, turns
+    return first, last, turns
+
+
+def first_word(text: str) -> str:
+    head = re.sub(r"^[\s*_`>#\-]+", "", text)          # "**🐤.**" -> "🐤.**"
+    return re.split(r"[\s.,:;!?)\]*_`]+", head, maxsplit=1)[0] if head else ""
 
 
 def check() -> int:
@@ -97,19 +108,22 @@ def check() -> int:
     if not path or not os.path.exists(path):
         return 0
     w = word()
-    text, turns = last_final_text(path)
-    if text is None:
+    first_text, last_text, turns = turn_texts(path)
+    if last_text is None:
         return 0
 
-    head = re.sub(r"^[\s*_`>#\-]+", "", text)          # "**🐤.**" -> "🐤.**"
-    first = re.split(r"[\s.,:;!?)\]*_`]+", head, maxsplit=1)[0] if head else ""
-    hit = first.lower() == w.lower()
+    first = first_word(first_text)
+    final = first_word(last_text)
+    hit_first = first.lower() == w.lower()
+    hit_last = final.lower() == w.lower()
+    hit = hit_first and hit_last
 
     session = payload.get("session_id") or "unknown"
     os.makedirs(LOG_DIR, exist_ok=True)
     log_path = os.path.join(LOG_DIR, f"{session}.log")
     with open(log_path, "a", encoding="utf-8") as log:
-        log.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S')}\tturn={turns}\t{'hit' if hit else 'MISS'}\t{first[:40]!r}\n")
+        log.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S')}\tturn={turns}\t{'hit' if hit else 'MISS'}\t"
+                  f"first={first[:20]!r} last={final[:20]!r}\n")
     if hit:
         return 0
 
@@ -120,8 +134,8 @@ def check() -> int:
         return 0
 
     reason = (
-        f"CANARY DROPPED: your final message did not start with the word '{w}' "
-        f"(turn {turns}). That instruction is the tripwire for context degradation "
+        f"CANARY DROPPED: your {'first' if not hit_first else 'final'} message of this turn did not start "
+        f"with the word '{w}' (turn {turns}). That instruction is the tripwire for context degradation "
         "and it just went missing, which means this session is degrading. Do three things, "
         "in this order: (1) if this workspace keeps a journal or session notes, update them "
         "with what was done and what is open; (2) tell the user in one plain line that the "

@@ -9,14 +9,14 @@ A long session fills the context window. The model does not fail loudly when tha
 
 The instruction is one line, injected at session start:
 
-> The very first characters of the final message of every turn are `🐤` followed by a period, before any greeting, heading or other word.
+> The very first characters of every message you write in a turn are `🐤` followed by a period: the first message after the user's prompt, the short lines before a tool call, and the final one. Before any greeting, heading or other word.
 
 While the word is there, the model is still reading its instructions. The turn it goes missing, the session is degrading, and the next one or two replies are the ones to distrust. That is the whole trick. It comes from [agentsroom.dev](https://agentsroom.dev/blog/canary-trick-detect-ai-agent-degradation); the plugin adds the part that does not depend on a human noticing.
 
 ## What it does
 
 1. **The instruction.** A `SessionStart` hook injects the line as context. Nothing to add to `CLAUDE.md`. It runs again after `/clear` and `/compact`, so the tripwire is re-armed every time the window is reset.
-2. **The check.** A `Stop` hook reads the session transcript at the end of every turn and looks at the first word of the final assistant message.
+2. **The check.** A `Stop` hook reads the session transcript at the end of every turn and looks at the first word of the first and the last assistant message of the turn.
 3. **The alarm.** On a miss it blocks the turn once and makes Claude do three things: update the session notes if the workspace keeps them, tell the user in one line that the canary dropped, and recommend `/compact` with a focus line (or `/clear` plus a tight re-brief).
 4. **The record.** Every turn is logged to `~/.claude/canary-logs/<session>.log` with its turn number. After a few sessions you can read at which turn your sessions start to slip. That number is worth more than any rule of thumb about when to compact.
 
