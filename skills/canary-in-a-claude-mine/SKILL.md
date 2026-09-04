@@ -1,6 +1,6 @@
 ---
 name: canary-in-a-claude-mine
-description: A one-word tripwire that tells you a Claude Code session is degrading before it starts making things up. Use when a session runs long, when replies start feeling off, when the user asks "is this session still good" or "why does every reply start with Canary", or to read back at which turn a session slipped.
+description: A one-word tripwire that tells you a Claude Code session is degrading before it starts making things up. Use when a session runs long, when replies start feeling off, when the user asks "is this session still good" or "why does every reply start with 🐤", or to read back at which turn a session slipped.
 ---
 
 # Canary in a Claude mine
@@ -9,7 +9,7 @@ A long session fills the context window. The model does not fail loudly when tha
 
 The instruction is one line, injected at session start:
 
-> Start the final message of every turn with the word `Canary` and a period.
+> Start the final message of every turn with the word `🐤` and a period.
 
 While the word is there, the model is still reading its instructions. The turn it goes missing, the session is degrading, and the next one or two replies are the ones to distrust. That is the whole trick. It comes from [agentsroom.dev](https://agentsroom.dev/blog/canary-trick-detect-ai-agent-degradation); the plugin adds the part that does not depend on a human noticing.
 
@@ -22,13 +22,13 @@ While the word is there, the model is still reading its instructions. The turn i
 
 ## Changing the word
 
-Pick one that never appears in a normal reply. Either:
+Pick one that never appears in a normal reply. A word or a single emoji both work; ASCII art with `)` or a leading `>` does not, the matcher reads one token. Either:
 
 ```bash
 echo Sparrow > ~/.claude/canary
 ```
 
-or set `CANARY_WORD=Sparrow` in the `env` block of your Claude Code settings. `CANARY_DISABLE=1` silences both hooks, for batch runs. `CANARY_MAX_BLOCKS` (default 3) caps how many times a session can be blocked, so a broken setup cannot trap anyone.
+or set `CANARY_WORD=Canary` in the `env` block of your Claude Code settings. `CANARY_DISABLE=1` silences both hooks, for batch runs. `CANARY_MAX_BLOCKS` (default 3) caps how many times a session can be blocked, so a broken setup cannot trap anyone.
 
 ## Reading the signal
 

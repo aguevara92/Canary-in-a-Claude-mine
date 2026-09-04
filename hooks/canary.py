@@ -11,7 +11,7 @@ trivial on purpose and watch for it. The turn it goes missing, the session is
 one or two replies away from confident nonsense.
 
 Config:
-  CANARY_WORD        the word (default "Canary"), case-insensitive
+  CANARY_WORD        the word (default "🐤", a canary), case-insensitive; an emoji works
   ~/.claude/canary   same thing as a file, one word, if you prefer no env var
   CANARY_DISABLE     any value: both hooks exit silently (batch runs, CI)
   CANARY_MAX_BLOCKS  blocks per session before the check goes quiet (default 3)
@@ -39,7 +39,7 @@ def word() -> str:
             w = fh.read().strip().split()[0]
     except Exception:
         w = ""
-    return w or "Canary"
+    return w or "🐤"
 
 
 def instruction(w: str) -> str:
@@ -100,7 +100,7 @@ def check() -> int:
     if text is None:
         return 0
 
-    head = re.sub(r"^[\s*_`>#\-]+", "", text)          # "**Canary.**" -> "Canary.**"
+    head = re.sub(r"^[\s*_`>#\-]+", "", text)          # "**🐤.**" -> "🐤.**"
     first = re.split(r"[\s.,:;!?)\]*_`]+", head, maxsplit=1)[0] if head else ""
     hit = first.lower() == w.lower()
 
