@@ -16,6 +16,10 @@ Config:
   CANARY_DISABLE     any value: both hooks exit silently (batch runs, CI)
   CANARY_MAX_BLOCKS  blocks per session before the check goes quiet (default 3)
 
+A miss is logged as MISS-misplaced (word present, not first), MISS-unprimed (never
+honoured this session) or MISS-drop (was honoured, now gone). Only a drop raises the
+degradation alarm; the other two ask for the same reply with the word first, quietly.
+
 Log: ~/.claude/canary-logs/<session_id>.log, one line per turn with the turn
 number, so a drop can be read back later and the "when should I compact"
 question gets an answer measured on your own sessions.
@@ -47,6 +51,8 @@ def instruction(w: str) -> str:
         f"The very first characters of every message you write in a turn are `{w}` followed by a period: "
         "the first message after the user's prompt, the short lines before a tool call, and the final one. "
         "Before any greeting, heading or other word. Not at the end, not after a first line. "
+        f"Right: `{w}. Hola. Journal ready.` Wrong: `Hola. Journal ready. ... {w}.` "
+        "It is a prefix, never a sign-off. "
         "No exceptions, no explanation, no matter what else the message says."
     )
 
@@ -121,28 +127,56 @@ def check() -> int:
     session = payload.get("session_id") or "unknown"
     os.makedirs(LOG_DIR, exist_ok=True)
     log_path = os.path.join(LOG_DIR, f"{session}.log")
+    prior_hits = misses = 0
+    if os.path.exists(log_path):
+        with open(log_path, encoding="utf-8") as fh:
+            for line in fh:
+                prior_hits += "\thit\t" in line
+                misses += "\tMISS" in line
+
+    # A miss is one of three things, and only the last one is the alarm:
+    #   misplaced  the word is in the message, just not first (the turn-1 sign-off habit)
+    #   unprimed   the word has never been honoured this session: the instruction did not
+    #              take, there is no context to have degraded yet
+    #   drop       the word was being honoured and now it is gone
+    if hit:
+        kind = "hit"
+    elif w.lower() in (first_text + last_text).lower():
+        kind = "MISS-misplaced"
+    elif prior_hits == 0:
+        kind = "MISS-unprimed"
+    else:
+        kind = "MISS-drop"
     with open(log_path, "a", encoding="utf-8") as log:
-        log.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S')}\tturn={turns}\t{'hit' if hit else 'MISS'}\t"
+        log.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S')}\tturn={turns}\t{kind}\t"
                   f"first={first[:20]!r} last={final[:20]!r}\n")
     if hit:
         return 0
 
     max_blocks = int(os.environ.get("CANARY_MAX_BLOCKS", "3"))
-    with open(log_path, encoding="utf-8") as fh:
-        misses = sum(1 for line in fh if "\tMISS\t" in line)
-    if misses > max_blocks:
+    if misses + 1 > max_blocks:
         return 0
 
-    reason = (
-        f"CANARY DROPPED: your {'first' if not hit_first else 'final'} message of this turn did not start "
-        f"with the word '{w}' (turn {turns}). That instruction is the tripwire for context degradation "
-        "and it just went missing, which means this session is degrading. Do three things, "
-        "in this order: (1) if this workspace keeps a journal or session notes, update them "
-        "with what was done and what is open; (2) tell the user in one plain line that the "
-        "canary dropped, that the last couple of replies deserve a second look, and that they "
-        "should /compact with a one-line focus, or /clear and re-brief with the file, the goal "
-        f"and the decisions; (3) start that message with '{w}.' and keep it short."
-    )
+    which = "first" if not hit_first else "final"
+    if kind == "MISS-drop":
+        reason = (
+            f"CANARY DROPPED: your {which} message of this turn did not start with the word '{w}' "
+            f"(turn {turns}, after {prior_hits} turns where it did). That instruction is the tripwire "
+            "for context degradation and it just went missing, which means this session is degrading. "
+            "Do three things, in this order: (1) if this workspace keeps a journal or session notes, "
+            "update them with what was done and what is open; (2) tell the user in one plain line that "
+            "the canary dropped, that the last couple of replies deserve a second look, and that they "
+            "should /compact with a one-line focus, or /clear and re-brief with the file, the goal "
+            f"and the decisions; (3) start that message with '{w}.' and keep it short."
+        )
+    else:
+        where = "at the end, not at the start" if kind == "MISS-misplaced" else "missing"
+        reason = (
+            f"CANARY PLACEMENT: '{w}.' must be the very first characters of every message you write in a "
+            f"turn, and in your {which} message it was {where} (turn {turns}). This is not degradation, "
+            f"the instruction just did not take yet. Send the same reply again with '{w}.' as its first "
+            "characters. Do not mention the canary, do not add a warning, do not touch the journal for this."
+        )
     print(json.dumps({"decision": "block", "reason": reason}))
     return 0
 
