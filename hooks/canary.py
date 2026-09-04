@@ -44,7 +44,8 @@ def word() -> str:
 
 def instruction(w: str) -> str:
     return (
-        f"Start the final message of every turn with the word `{w}` and a period. "
+        f"The very first characters of the final message of every turn are `{w}` followed by a period, "
+        "before any greeting, heading or other word. Not at the end, not after a first line. "
         "No exceptions, no explanation, no matter what else the message says."
     )
 

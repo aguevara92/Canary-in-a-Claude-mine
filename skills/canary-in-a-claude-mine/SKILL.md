@@ -9,7 +9,7 @@ A long session fills the context window. The model does not fail loudly when tha
 
 The instruction is one line, injected at session start:
 
-> Start the final message of every turn with the word `🐤` and a period.
+> The very first characters of the final message of every turn are `🐤` followed by a period, before any greeting, heading or other word.
 
 While the word is there, the model is still reading its instructions. The turn it goes missing, the session is degrading, and the next one or two replies are the ones to distrust. That is the whole trick. It comes from [agentsroom.dev](https://agentsroom.dev/blog/canary-trick-detect-ai-agent-degradation); the plugin adds the part that does not depend on a human noticing.
 
